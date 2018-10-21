@@ -27,17 +27,7 @@ namespace ShortestDistance
 
             p.ShowStage();
 
-            //最短経路の調査
-            p.SetStepForStage();
-
-            for (int i = 0; i < p.width; i++)
-            {
-                for (int j = 0; j < p.height; j++)
-                {
-                    Console.Write(p.minStep[i, j] + ", ");
-                }
-                Console.WriteLine();
-            }
+            p.ShowHanding();
         }
 
         void InitSetting()
@@ -208,11 +198,11 @@ namespace ShortestDistance
 
         void ShowStage()
         {
-            for (int i = 0; i < this.width; i++)
+            for (int i = 0; i < height; i++)
             {
-                for (int j = 0; j < this.height; j++)
+                for (int j = 0; j < width; j++)
                 {
-                    Console.Write(ConvertToSymbolFromState(this.stage[i, j]));
+                    Console.Write(ConvertToSymbolFromState(this.stage[j, i]));
                 }
                 Console.WriteLine();
             }
@@ -264,15 +254,6 @@ namespace ShortestDistance
 
             while(isExamine)
             {
-                for (int i = 0; i < width; i++)
-                {
-                    for (int j = 0; j < height; j++)
-                    {
-                        Console.Write(minStep[i, j] + ", ");
-                    }
-                    Console.WriteLine();
-                }
-                Console.WriteLine();
                 SetStep(step);
                 step++;
             }
@@ -395,6 +376,83 @@ namespace ShortestDistance
                 return false;
             }
             return true;
+        }
+
+        void ShowHanding()
+        {
+            //最短経路の調査
+            SetStepForStage();
+
+            if (!CanMoveToStartFromGoal())
+            {
+                Console.WriteLine("スタートからゴールまで行ける道が存在しません");
+                return;
+            }
+
+            int x = 0, y = 0;       //現在地
+            int nowStep = -1;
+            //スタート地点の設定
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    if (stage[i, j] == State.START)
+                    {
+                        x = i;
+                        y = j;
+
+                        nowStep = minStep[i, j];
+                    }
+                }
+            }
+
+            Console.Write("最短移動経路: ");
+            //スタート地点から逆順でゴールまで向かう
+            while(nowStep > 0)
+            {
+                if (CorrectIndex(x - 1, y) && minStep[x - 1, y] == nowStep - 1)
+                {
+                    //左が最短
+                    Console.Write("←");
+                    x--;
+                }
+                else if(CorrectIndex(x + 1, y) && minStep[x + 1, y] == nowStep - 1)
+                {
+                    //右が最短
+                    Console.Write("→");
+                    x++;
+                }
+                else if(CorrectIndex(x, y - 1) && minStep[x, y - 1] == nowStep - 1)
+                {
+                    //上が最短
+                    Console.Write("↑");
+                    y--;
+                }
+                else
+                {
+                    //下が最短
+                    Console.Write("↓");
+                    y++;
+                }
+                nowStep--;
+            }
+        }
+
+        bool CanMoveToStartFromGoal()
+        {
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    if(stage[i, j] == State.START)
+                    {
+                        return minStep[i, j] != -1;
+                    }
+                }
+            }
+            //ここまで来ることは無い
+            Debug.Assert(false);
+            return false;
         }
     }
 }
