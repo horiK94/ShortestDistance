@@ -15,21 +15,41 @@ namespace ShortestDistance
 
         int width = 0, height = 0;
         State[,] stage = null;
+        int[,] minStep = null;
+
+        bool isExamine = true;
 
         static void Main(string[] args)
         {
             Program p = new Program();
-            p.SetWidthAndHeight();
-            p.InitStage();
 
-            p.SetRandomPos(State.START);
-            p.SetRandomPos(State.GOAL);
-
-            Console.Write("Input obstacle num: ");
-            int obstcleNum = int.Parse(Console.ReadLine());
-            p.SetRandomPos(obstcleNum, State.OBSTACLE);
+            p.InitSetting();
 
             p.ShowStage();
+
+            //最短経路の調査
+            p.SetStepForStage();
+
+            for (int i = 0; i < p.width; i++)
+            {
+                for (int j = 0; j < p.height; j++)
+                {
+                    Console.Write(p.minStep[i, j] + ", ");
+                }
+                Console.WriteLine();
+            }
+        }
+
+        void InitSetting()
+        {
+            SetWidthAndHeight();
+
+            InitStage();
+
+            SetRandomPos(State.START);
+            SetRandomPos(State.GOAL);
+
+            SetObstacleNum();
         }
 
         /// <summary>
@@ -38,9 +58,8 @@ namespace ShortestDistance
         void SetWidthAndHeight()
         {
             Console.Write("Input width: ");
-
-
-            5this.width = int.Parse(Console.ReadLine());
+           
+            this.width = int.Parse(Console.ReadLine());
             if (this.width <= 0)
             {
                 Console.WriteLine("\nInvalid Value!");
@@ -52,6 +71,13 @@ namespace ShortestDistance
             {
                 Console.WriteLine("\nInvalid Value!");
             }
+        }
+
+        void SetObstacleNum()
+        {
+            Console.Write("Input obstacle num: ");
+            int obstcleNum = int.Parse(Console.ReadLine());
+            SetRandomPos(obstcleNum, State.OBSTACLE);
         }
 
         /// <summary>
@@ -66,6 +92,24 @@ namespace ShortestDistance
             }
 
             stage = new State[width, height];
+        }
+
+        void InitMinStep()
+        {
+            if (width <= 0 || height <= 0)
+            {
+                Console.WriteLine("width か heightの値が0以下です");
+                return;
+            }
+
+            minStep = new int[width, height];
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    minStep[i, j] = -1;     //-1で初期化
+                }
+            }
         }
 
         /// <summary>
@@ -191,6 +235,166 @@ namespace ShortestDistance
                     Debug.Assert(false);
                     return ' ';
             }
+        }
+
+        void SetStepAtGoalPos()
+        {
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    if (stage[i, j] == State.GOAL)
+                    {
+                        //GOAL地点を0步目とする
+                        minStep[i, j] = 0;
+                    }
+                }
+            }
+        }
+
+        void SetStepForStage()
+        {
+            //調査開始
+            isExamine = true;
+
+            InitMinStep();
+            SetStepAtGoalPos();
+
+            int step = 1;
+
+            while(isExamine)
+            {
+                for (int i = 0; i < width; i++)
+                {
+                    for (int j = 0; j < height; j++)
+                    {
+                        Console.Write(minStep[i, j] + ", ");
+                    }
+                    Console.WriteLine();
+                }
+                Console.WriteLine();
+                SetStep(step);
+                step++;
+            }
+        }
+
+        void SetStep(int setStepNum)
+        {
+            bool isMove = false;
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    if(minStep[i, j] == setStepNum - 1)
+                    {
+                        //最小距離としてstepNum - 1が登録されている時は、移動を開始する
+                        isMove = CanMove(i, j) ? true : isMove;
+                        Move(i, j, setStepNum);     //置けるかどうかを調べてから置く必要がある.順番注意
+                    }
+                }
+            }
+
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    if(stage[i, j] == State.START && minStep[i, j] != -1)
+                    {
+                        //スタート位置に最小距離が登録されたなら、調査を終える
+                        isExamine = false;
+                        return;
+                    }
+                }
+            }
+
+            //次の場所にどこも塗れなくても調査を終了
+            if(!isMove)
+            {
+                isExamine = false;
+            }
+        }
+
+        void Move(int x, int y, int setStepNum)
+        {
+            //左
+            SetStep(x - 1, y, setStepNum);
+            //右
+            SetStep(x + 1, y, setStepNum);
+            //上
+            SetStep(x, y - 1, setStepNum);
+            //下
+            SetStep(x, y + 1, setStepNum);
+        }
+
+        bool CanMove(int x, int y)
+        {
+            //左
+            if(CanSetStep(x - 1, y))
+            {
+                return true;
+            }
+            //右
+            if(CanSetStep(x + 1, y))
+            {
+                return true;
+            }
+            //上
+            if(CanSetStep(x, y - 1))
+            {
+                return true;
+            }
+            //下
+            if(CanSetStep(x, y + 1))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        void  SetStep(int x, int y, int setStepNum)
+        {
+            if(CanSetStep(x, y))
+            {
+                minStep[x, y] = setStepNum;
+            }
+        }
+
+        bool CanSetStep(int x, int y)
+        {
+            //添字チェック
+            if (!CorrectIndex(x, y))
+            {
+                //添字が配列の範囲外の場合は移動終了
+                return false;
+            }
+
+            if(stage[x, y] == State.OBSTACLE)
+            {
+                //移動先が障害物の場合も移動終了
+                return false;
+            }
+
+            if (minStep[x, y] == -1)
+            {
+                //未調査の場所の場合は最小移動距離を登録できる
+                return true;
+            }
+            return false;
+        }
+
+        bool CorrectIndex(int x, int y)
+        {
+            //配列の範囲チェック
+            if(x < 0 || x >= width)
+            {
+                return false;
+            }
+            if (y < 0 || y >= height) 
+            {
+                return false;
+            }
+            return true;
         }
     }
 }
